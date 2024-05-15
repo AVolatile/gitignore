@@ -1,31 +1,52 @@
-// Load environment variables from a .env file into process.env
 require('dotenv').config();
-
-// Import the express module and path module
 const express = require('express');
 const path = require('path');
+const mysql = require('mysql');
+const bodyParser = require('body-parser');
 
-// Retrieve the SECRET_USER and PORT variables from the environment
 const doxname = process.env.SECRET_USER;
-const PORT = process.env.PORT || 3000; // Default to port 3000 if PORT is not defined
+const PORT = process.env.PORT || 3000;
 
-// Log the SECRET_USER to the console
 console.log(doxname);
 
-// Create an instance of an Express application
 const app = express();
-
-// Middleware to serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.json());
 
-// Define a route handler for the root URL ('/')
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to the database:', err);
+    return;
+  }
+  console.log('Connected to the database.');
+});
+
 app.get('/', function (req, res) {
-  // Send the index.html file located in the "public" directory
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start the server and listen on the specified PORT
+app.post('/add-user', (req, res) => {
+  const { username, email } = req.body;
+  const query = 'INSERT INTO yourDBtablename (username, email) VALUES (?, ?)';
+  const values = [username, email];
+
+  connection.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Error adding user:', err);
+      res.status(500).send('Error adding user.');
+      return;
+    }
+    res.status(200).send('User added successfully.');
+  });
+});
+
 app.listen(PORT, () => {
-  // Log a message indicating the server is running and on which port
   console.log(`Server is running on port ${PORT}`);
 });
