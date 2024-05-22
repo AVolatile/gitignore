@@ -2,7 +2,9 @@
 const express = require('express');
 const mysql = require('mysql2');
 const bodyParser = require('body-parser');
-require('dotenv').config();
+const session = require('express-session');
+const cors = require('cors');
+require('dotenv').config()
 
 // Set up a connection to the MySQL database using environment variables
 const connection = mysql.createConnection({
@@ -54,30 +56,10 @@ app.post('/createUser', (req, res) => {
   });
 });
 
-// Route to handle login creation (used to modify the table)
-app.post('/createLogin', (req, res) => {
-  const { UserName, Email, Password } = req.body;
-
-  const userDetails = {
-    UserName: UserName,
-    Email: Email,
-    Password: Password
-  };
-
-  connection.query('INSERT INTO users SET ?', userDetails, (err, result) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send('Error inserting data into database');
-    } else {
-      res.status(200).send('Data inserted successfully');
-    }
-  });
-});
-
 // Route to handle user login
 app.post('/login', (req, res) => {
   const { loginUsername, loginPassword } = req.body;
-console.log(req.body)
+  console.log(req.body);
 
   // Query the database to check if the username and password exist
   connection.query('SELECT * FROM employees WHERE UserName = ? AND Password = ?', [loginUsername, loginPassword], (err, results) => {
@@ -95,6 +77,51 @@ console.log(req.body)
     }
   });
 });
+
+// Route to display the table of employees
+app.get('/employees', (req, res) => {
+  connection.query('SELECT EmployeeID, FirstName, LastName, Department, JobTitle, StartDate, EndDate, Salary, UserName, Email FROM employees', (err, results) => {
+    if (err) {
+      console.error('Error fetching data:', err);
+      res.status(500).send('Error fetching data from database');
+      console.log(err.message)
+      return;
+    }
+
+    let tableHTML = `<h2>Employee Table</h2>
+          <table border="2">
+            <tr>
+              <th>EmployeeID</th>
+              <th>FirstName</th>
+              <th>LastName</th>
+              <th>Department</th>
+              <th>JobTitle</th>
+              <th>StartDate</th>
+              <th>EndDate</th>
+              <th>Salary</th>
+              <th>UserName</th>
+              <th>Email</th>
+            </tr>`
+
+    results.forEach(row => {
+      tableHTML += `<tr>
+          <td>${row.EmployeeID}</td>
+          <td>${row.FirstName}</td>
+          <td>${row.LastName}</td>
+          <td>${row.Department}</td>
+          <td>${row.JobTitle}</td>
+          <td>${row.StartDate}</td>
+          <td>${row.EndDate}</td>
+          <td>${row.Salary}</td>
+          <td>${row.UserName}</td>
+          <td>${row.Email}</td>
+        </tr>`
+    })
+
+    tableHTML += `</table>`;
+    res.send(tableHTML);
+  })
+})
 
 // Start the Express server and listen on the specified port
 app.listen(PORT, () => {
